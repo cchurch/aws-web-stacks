@@ -179,6 +179,9 @@ bastion_security_group = ec2.SecurityGroup(
     GroupDescription="Bastion security group.",
     VpcId=Ref(vpc),
     Condition=bastion_ami_set,
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
+    ),
 )
 
 bastion_security_group_ingress_ssh = ec2.SecurityGroupIngress(

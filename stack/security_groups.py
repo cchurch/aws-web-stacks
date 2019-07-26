@@ -1,7 +1,7 @@
 import os
 from itertools import product
 
-from troposphere import Ref
+from troposphere import Join, Ref, Tags
 from troposphere.ec2 import SecurityGroup, SecurityGroupRule
 
 from .template import template
@@ -22,6 +22,9 @@ load_balancer_security_group = SecurityGroup(
             CidrIp="0.0.0.0/0",
         ) for port in ["80", "443"]
     ],
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "elb"]),
+    ),
 )
 
 # allow traffic from the load balancer subnets to the web workers
@@ -62,4 +65,7 @@ container_security_group = SecurityGroup(
     GroupDescription="Container security group.",
     VpcId=Ref(vpc),
     SecurityGroupIngress=ingress_rules,
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "container"]),
+    ),
 )

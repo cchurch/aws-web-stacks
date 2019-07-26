@@ -34,6 +34,7 @@ application = Ref(template.add_resource(
                 ValidationDomain=domain_name,
             ),
         ],
-        ValidationMethod=Ref(certificate_validation_method)
+        ValidationMethod=Ref(certificate_validation_method),
+        DeletionPolicy="Retain",
     )
 ))
