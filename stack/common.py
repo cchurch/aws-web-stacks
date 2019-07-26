@@ -139,3 +139,19 @@ secret_key = Ref(template.add_parameter(
     group="Application Server",
     label="Secret Key",
 ))
+
+use_aes256_encryption = template.add_parameter(
+    Parameter(
+        "UseAES256Encryption",
+        Description="Whether or not to use server side encryption for S3, EBS, and RDS. "
+                    "When true, encryption is enabled for all resources.",
+        Type="String",
+        AllowedValues=["true", "false"],
+        Default="false",
+    ),
+    group="Global",
+    label="Enable Encryption",
+)
+
+use_aes256_encryption_condition = "UseAES256EncryptionCondition"
+template.add_condition(use_aes256_encryption_condition, Equals(Ref(use_aes256_encryption), "true"))
