@@ -52,13 +52,14 @@ ingress_rules = [SecurityGroupRule(
 ) for port, cidr in product(*[web_worker_ports, cidrs])]
 
 # Health check
-ingress_rules.append(SecurityGroupRule(
-    IpProtocol="tcp",
-    FromPort=Ref("WebWorkerHealthCheckPort"),
-    ToPort=Ref("WebWorkerHealthCheckPort"),
-    Description="ELB Health Check",
-    SourceSecurityGroupId=Ref(load_balancer_security_group),
-))
+if os.environ.get('USE_EB') != 'on':
+    ingress_rules.append(SecurityGroupRule(
+        IpProtocol="tcp",
+        FromPort=Ref("WebWorkerHealthCheckPort"),
+        ToPort=Ref("WebWorkerHealthCheckPort"),
+        Description="ELB Health Check",
+        SourceSecurityGroupId=Ref(load_balancer_security_group),
+    ))
 
 # AdministratorAccess
 ingress_rules.append(SecurityGroupRule(
