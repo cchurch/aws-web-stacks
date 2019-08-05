@@ -246,6 +246,7 @@ bastion_instance = ec2.Instance(
     Condition=bastion_ami_set,
     Tags=Tags(
         Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
+        Role="bastion",
     ),
 )
 
