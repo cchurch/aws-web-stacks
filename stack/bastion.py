@@ -1,6 +1,7 @@
 import troposphere.ec2 as ec2
 from troposphere import And, Condition, Equals, If, Join, Not, Output, Parameter, Ref, Tags
 
+from .common import use_aes256_encryption
 from .template import template
 from .vpc import public_subnet, vpc
 
@@ -232,6 +233,16 @@ bastion_instance = ec2.Instance(
     KeyName=If(bastion_ami_set, Ref(bastion_key_name), Ref("AWS::NoValue")),
     SecurityGroupIds=[Ref(bastion_security_group)],
     SubnetId=Ref(public_subnet),
+    BlockDeviceMappings=[
+        ec2.BlockDeviceMapping(
+            DeviceName="/dev/sda1",
+            Ebs=ec2.EBSBlockDevice(
+                VolumeType="gp2",
+                VolumeSize=8,
+                Encrypted=Ref(use_aes256_encryption),
+            ),
+        ),
+    ],
     Condition=bastion_ami_set,
     Tags=Tags(
         Name=Join("-", [Ref("AWS::StackName"), "bastion"]),

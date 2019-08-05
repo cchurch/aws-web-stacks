@@ -1,4 +1,7 @@
 from troposphere import AWS_STACK_NAME, Equals, Join, Ref, autoscaling, iam
+from troposphere.policies import (
+    AutoScalingReplacingUpdate, AutoScalingRollingUpdate, UpdatePolicy
+)
 
 from .assets import assets_management_policy
 from .common import container_instance_type, use_aes256_encryption
@@ -112,6 +115,7 @@ container_instance_configuration = autoscaling.LaunchConfiguration(
         autoscaling.BlockDeviceMapping(
             DeviceName="/dev/sda1",
             Ebs=autoscaling.EBSBlockDevice(
+                VolumeType="gp2",
                 VolumeSize=container_volume_size,
                 Encrypted=Ref(use_aes256_encryption),
             )
@@ -131,11 +135,22 @@ autoscaling_group = autoscaling.AutoScalingGroup(
     LoadBalancerNames=[Ref(load_balancer)],
     HealthCheckType="EC2",
     HealthCheckGracePeriod=300,
+    UpdatePolicy=UpdatePolicy(
+        #AutoScalingReplacingUpdate=AutoScalingReplacingUpdate(
+        #    WillReplace=True,
+        #),
+        AutoScalingRollingUpdate=AutoScalingRollingUpdate(
+            #PauseTime='PT5M',
+            #MinInstancesInService="1",
+            MaxBatchSize='1',
+            #WaitOnResourceSignals=True,
+        ),
+    ),
     Tags=[
         {
             "Key": "Name",
             "Value": Join("-", [Ref(AWS_STACK_NAME), "web_worker"]),
             "PropagateAtLaunch": True,
-        }
+        },
     ],
 )
