@@ -1,16 +1,34 @@
 import troposphere.ec2 as ec2
 from troposphere import And, Condition, Equals, If, Join, Not, Output, Parameter, Ref, Tags
 
-from .common import use_aes256_encryption
+from .common import dont_create_value, use_aes256_encryption
 from .template import template
 from .vpc import public_subnet, vpc
+
+
+bastion_type = template.add_parameter(
+    Parameter(
+        "BastionType",
+        Description="Type of bastion server to create. Determines the default "
+                    "security group ingress rules to create.",
+        Type="String",
+        Default=dont_create_value,
+        AllowedValues=[
+            dont_create_value,
+            "SSH",
+            "OpenVPN",
+        ],
+    ),
+    group="Bastion Server",
+    label="Type",
+)
 
 bastion_ami = template.add_parameter(
     Parameter(
         "BastionAMI",
         Description="(Optional) Bastion or VPN server AMI in the same region as this stack.",
         Type="AWS::EC2::Image::Id",
-        Default="",
+        Default=dont_create_value,
     ),
     group="Bastion Server",
     label="AMI",
@@ -123,21 +141,6 @@ bastion_instance_type = template.add_parameter(
     label="Instance Type",
 )
 
-bastion_is_pfsense = template.add_parameter(
-    Parameter(
-        "BastionPfSense",
-        Description="Whether or not bastion is running pfSense.",
-        Type="String",
-        AllowedValues=[
-            'true',
-            'false',
-        ],
-        Default="false",
-    ),
-    group="Bastion Server",
-    label="Is pfSense?",
-)
-
 bastion_key_name = template.add_parameter(
     Parameter(
         "BastionKeyName",
@@ -145,84 +148,58 @@ bastion_key_name = template.add_parameter(
                     "the Bastion instance. This parameter is required even if "
                     "no Bastion AMI is specified (but will be unused).",
         Type="AWS::EC2::KeyPair::KeyName",
-        ConstraintDescription="must be the name of an existing EC2 KeyPair."
+        ConstraintDescription="must be the name of an existing EC2 KeyPair.",
+        Default=dont_create_value,
     ),
     group="Bastion Server",
     label="SSH Key Name",
 )
 
-bastion_allowed_ssh_network = template.add_parameter(
-    Parameter(
-        "BastionAllowedSSHNetwork",
-        Description="Network in CIDR format allowed SSH access to the "
-                    "bastion instance.",
-        Type="String",
-        # AllowedPattern="",
-        Default="",
-        ConstraintDescription="must be a valid CIDR range."
-    ),
-    group="Bastion Server",
-    label="Allowed SSH Network",
-)
+bastion_type_set = "BastionTypeSet"
+template.add_condition(bastion_type_set, Not(Equals("", Ref(bastion_type))))
+
+bastion_type_is_openvpn_set = "BastionTypeIsOpenVPNSet"
+template.add_condition(bastion_type_is_openvpn_set, Equals("OpenVPN", Ref(bastion_type)))
 
 bastion_ami_set = "BastionAMISet"
 template.add_condition(bastion_ami_set, Not(Equals("", Ref(bastion_ami))))
 
-bastion_is_pfsense_set = "BastionIsPfSenseSet"
-template.add_condition(bastion_is_pfsense_set, Equals("true", Ref(bastion_is_pfsense)))
-
-bastion_allowed_ssh_network_set = "BastionAllowedSSHNetworkSet"
-template.add_condition(bastion_allowed_ssh_network_set, Not(Equals("", Ref(bastion_allowed_ssh_network))))
+bastion_type_and_ami_set = "BastionTypeAndAMISet"
+template.add_condition(bastion_type_and_ami_set, And(Condition(bastion_type_set), Condition(bastion_ami_set)))
 
 bastion_security_group = ec2.SecurityGroup(
     'BastionSecurityGroup',
     template=template,
     GroupDescription="Bastion security group.",
     VpcId=Ref(vpc),
-    Condition=bastion_ami_set,
-    Tags=Tags(
-        Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
-    ),
-)
-
-bastion_security_group_ingress_ssh = ec2.SecurityGroupIngress(
-    'BastionSecurityGroupIngressSSH',
-    template=template,
-    GroupId=Ref(bastion_security_group),
-    IpProtocol="tcp",
-    FromPort=22,
-    ToPort=22,
-    CidrIp=Ref(bastion_allowed_ssh_network),
-    Condition=bastion_allowed_ssh_network_set,
-)
-
-bastion_security_group_ingress_https = ec2.SecurityGroupIngress(
-    'BastionSecurityGroupIngressHTTPS',
-    template=template,
-    GroupId=Ref(bastion_security_group),
-    IpProtocol="tcp",
-    FromPort=443,
-    ToPort=443,
-    CidrIp=Ref(bastion_allowed_ssh_network),
-    Condition=bastion_allowed_ssh_network_set,
-)
-
-bastion_security_group_ingress_openvpn = ec2.SecurityGroupIngress(
-    'BastionSecurityGroupIngressOpenVPN',
-    template=template,
-    GroupId=Ref(bastion_security_group),
-    IpProtocol="udp",
-    FromPort=1194,
-    ToPort=1194,
-    CidrIp="0.0.0.0/0",
-    Condition=bastion_is_pfsense_set,
+    Condition=bastion_type_set,
+    SecurityGroupIngress=[
+        ec2.SecurityGroupRule(
+            IpProtocol="tcp",
+            FromPort=22,
+            ToPort=22,
+            CidrIp=Ref('AdministratorIPAddress'),
+        ),
+        If(bastion_type_is_openvpn_set, ec2.SecurityGroupRule(
+            IpProtocol="tcp",
+            FromPort=443,
+            ToPort=443,
+            CidrIp=Ref('AdministratorIPAddress'),
+        ), Ref("AWS::NoValue")),
+        If(bastion_type_is_openvpn_set, ec2.SecurityGroupRule(
+            IpProtocol="udp",
+            FromPort=1194,
+            ToPort=1194,
+            CidrIp="0.0.0.0/0",
+        ), Ref("AWS::NoValue")),
+    ],
 )
 
 # Elastic IP for Bastion instance
 bastion_eip = ec2.EIP(
     "BastionEIP",
     template=template,
-    Condition=bastion_ami_set,
+    Condition=bastion_type_set,
 )
 
 bastion_instance = ec2.Instance(
@@ -239,11 +216,11 @@ bastion_instance = ec2.Instance(
             Ebs=ec2.EBSBlockDevice(
                 VolumeType="gp2",
                 VolumeSize=8,
-                Encrypted=Ref(use_aes256_encryption),
+                Encrypted=use_aes256_encryption,
             ),
         ),
     ],
-    Condition=bastion_ami_set,
+    Condition=bastion_type_and_ami_set,
     Tags=Tags(
         Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
         Role="bastion",
@@ -256,7 +233,7 @@ eip_assoc = ec2.EIPAssociation(
     template=template,
     InstanceId=Ref(bastion_instance),
     EIP=Ref(bastion_eip),
-    Condition=bastion_ami_set,
+    Condition=bastion_type_and_ami_set,
 )
 
 template.add_output([
@@ -264,29 +241,6 @@ template.add_output([
         "BastionIP",
         Description="Public IP address of Bastion instance",
         Value=Ref(bastion_eip),
-        Condition=bastion_ami_set,
+        Condition=bastion_type_set,
     ),
 ])
-
-# Allow bastion full access to workers.
-container_security_group_bastion_ingress = ec2.SecurityGroupIngress(
-    'ContainerSecurityGroupBastionIngress',
-    template=template,
-    GroupId=Ref("ContainerSecurityGroup"),
-    IpProtocol='-1',
-    SourceSecurityGroupId=Ref(bastion_security_group),
-    Condition=bastion_ami_set,
-)
-
-bastion_database_condition = "BastionDatabaseCondition"
-template.add_condition(bastion_database_condition, And(Condition(bastion_ami_set), Condition("DatabaseCondition")))
-
-# Allow bastion full access to database.
-database_security_group_bastion_ingress = ec2.SecurityGroupIngress(
-    'DatabaseSecurityGroupBastionIngress',
-    template=template,
-    GroupId=Ref("DatabaseSecurityGroup"),
-    IpProtocol='-1',
-    SourceSecurityGroupId=Ref(bastion_security_group),
-    Condition=bastion_database_condition,
-)

@@ -33,10 +33,10 @@ from troposphere.s3 import (
     PublicRead,
     ServerSideEncryptionByDefault,
     ServerSideEncryptionRule,
-    VersioningConfiguration,
+    VersioningConfiguration
 )
 
-from .common import arn_prefix, use_aes256_encryption_condition
+from .common import arn_prefix, use_aes256_encryption_cond
 from .domain import domain_name, domain_name_alternates, no_alt_domains
 from .template import template
 from .utils import ParameterWithDefaults as Parameter
@@ -44,7 +44,7 @@ from .utils import ParameterWithDefaults as Parameter
 common_bucket_conf = dict(
     BucketEncryption=BucketEncryption(
         ServerSideEncryptionConfiguration=If(
-            use_aes256_encryption_condition,
+            use_aes256_encryption_cond,
             [
                 ServerSideEncryptionRule(
                     ServerSideEncryptionByDefault=ServerSideEncryptionByDefault(

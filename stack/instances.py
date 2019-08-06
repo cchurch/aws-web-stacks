@@ -117,7 +117,7 @@ container_instance_configuration = autoscaling.LaunchConfiguration(
             Ebs=autoscaling.EBSBlockDevice(
                 VolumeType="gp2",
                 VolumeSize=container_volume_size,
-                Encrypted=Ref(use_aes256_encryption),
+                Encrypted=use_aes256_encryption,
             )
         ),
     ],
