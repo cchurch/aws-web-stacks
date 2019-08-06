@@ -1,7 +1,7 @@
 import os
 from itertools import product
 
-from troposphere import Ref
+from troposphere import If, Ref
 from troposphere.ec2 import SecurityGroup, SecurityGroupRule
 
 from .common import administrator_ip_address
@@ -66,6 +66,16 @@ ingress_rules.append(SecurityGroupRule(
     Description="Administrator SSH Access",
     CidrIp=administrator_ip_address,
 ))
+
+if os.environ.get('USE_NAT_GATEWAY') == 'on':
+    # Allow bastion full access to workers.
+    ingress_rules.append(
+        If("BastionTypeSet", SecurityGroupRule(
+            IpProtocol="-1",
+            SourceSecurityGroupId=Ref("BastionSecurityGroup"),
+            Description="Bastion Access",
+        ), "AWS:::NoValue"),
+    )
 
 container_security_group = SecurityGroup(
     'ContainerSecurityGroup',
