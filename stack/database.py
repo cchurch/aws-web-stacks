@@ -1,7 +1,6 @@
 from collections import OrderedDict
-import os
 
-from troposphere import Equals, FindInMap, If, Not, Ref, ec2, rds
+from troposphere import Equals, FindInMap, Join, Not, Ref, Tags, ec2, rds
 
 from .common import dont_create_value, use_aes256_encryption
 from .template import template
@@ -202,41 +201,30 @@ db_backup_retention_days = template.add_parameter(
 db_condition = "DatabaseCondition"
 template.add_condition(db_condition, Not(Equals(Ref(db_class), dont_create_value)))
 
-ingress_rules = [
-    # Rds Port in from web clusters
-    ec2.SecurityGroupRule(
-        IpProtocol="tcp",
-        FromPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-        ToPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-        CidrIp=container_a_subnet_cidr,
-    ),
-    ec2.SecurityGroupRule(
-        IpProtocol="tcp",
-        FromPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-        ToPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-        CidrIp=container_b_subnet_cidr,
-    ),
-]
-
-if os.environ.get('USE_NAT_GATEWAY') == 'on':
-    # Allow bastion access to database.
-    ingress_rules.append(
-        If("BastionTypeSet", ec2.SecurityGroupRule(
-            IpProtocol="tcp",
-            FromPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-            ToPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
-            SourceSecurityGroupId=Ref("BastionSecurityGroup"),
-            Description="Bastion Access",
-        ), "AWS:::NoValue"),
-    )
-
 db_security_group = ec2.SecurityGroup(
     'DatabaseSecurityGroup',
     template=template,
     GroupDescription="Database security group.",
     Condition=db_condition,
     VpcId=Ref(vpc),
-    SecurityGroupIngress=ingress_rules,
+    SecurityGroupIngress=[
+        # Rds Port in from web clusters
+        ec2.SecurityGroupRule(
+            IpProtocol="tcp",
+            FromPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
+            ToPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
+            CidrIp=container_a_subnet_cidr,
+        ),
+        ec2.SecurityGroupRule(
+            IpProtocol="tcp",
+            FromPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
+            ToPort=FindInMap("RdsEngineMap", Ref(db_engine), "Port"),
+            CidrIp=container_b_subnet_cidr,
+        ),
+    ],
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "rds"]),
+    ),
 )
 
 db_subnet_group = rds.DBSubnetGroup(

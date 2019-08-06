@@ -1,5 +1,5 @@
 import troposphere.ec2 as ec2
-from troposphere import And, Condition, Equals, If, Join, Not, Output, Parameter, Ref, Tags
+from troposphere import And, Condition, Equals, FindInMap, If, Join, Not, Output, Parameter, Ref, Tags
 
 from .common import dont_create_value, use_aes256_encryption
 from .template import template
@@ -173,29 +173,71 @@ bastion_security_group = ec2.SecurityGroup(
     GroupDescription="Bastion security group.",
     VpcId=Ref(vpc),
     Condition=bastion_type_set,
-    SecurityGroupIngress=[
-        ec2.SecurityGroupRule(
-            IpProtocol="tcp",
-            FromPort=22,
-            ToPort=22,
-            CidrIp=Ref('AdministratorIPAddress'),
-        ),
-        If(bastion_type_is_openvpn_set, ec2.SecurityGroupRule(
-            IpProtocol="tcp",
-            FromPort=443,
-            ToPort=443,
-            CidrIp=Ref('AdministratorIPAddress'),
-        ), Ref("AWS::NoValue")),
-        If(bastion_type_is_openvpn_set, ec2.SecurityGroupRule(
-            IpProtocol="udp",
-            FromPort=1194,
-            ToPort=1194,
-            CidrIp="0.0.0.0/0",
-        ), Ref("AWS::NoValue")),
-    ],
     Tags=Tags(
         Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
     ),
+)
+
+bastion_security_group_ingress_ssh = ec2.SecurityGroupIngress(
+    'BastionSecurityGroupIngressSSH',
+    template=template,
+    GroupId=Ref(bastion_security_group),
+    IpProtocol="tcp",
+    FromPort=22,
+    ToPort=22,
+    CidrIp=Ref("AdministratorIPAddress"),
+    Description="Administrator SSH access.",
+    Condition=bastion_type_set,
+)
+
+bastion_security_group_ingress_https = ec2.SecurityGroupIngress(
+    'BastionSecurityGroupIngressHTTPS',
+    template=template,
+    GroupId=Ref(bastion_security_group),
+    IpProtocol="tcp",
+    FromPort=443,
+    ToPort=443,
+    CidrIp=Ref("AdministratorIPAddress"),
+    Description="Administrator HTTPS access.",
+    Condition=bastion_type_is_openvpn_set,
+)
+
+bastion_security_group_ingress_openvpn = ec2.SecurityGroupIngress(
+    'BastionSecurityGroupIngressOpenVPN',
+    template=template,
+    GroupId=Ref(bastion_security_group),
+    IpProtocol="udp",
+    FromPort=1194,
+    ToPort=1194,
+    CidrIp="0.0.0.0/0",
+    Description="OpenVPN Access.",
+    Condition=bastion_type_is_openvpn_set,
+)
+
+# Allow bastion full access to workers.
+container_security_group_bastion_ingress = ec2.SecurityGroupIngress(
+    'ContainerSecurityGroupBastionIngress',
+    template=template,
+    GroupId=Ref("ContainerSecurityGroup"),
+    IpProtocol='-1',
+    SourceSecurityGroupId=Ref(bastion_security_group),
+    Condition=bastion_type_set,
+)
+
+bastion_database_condition = "BastionDatabaseCondition"
+template.add_condition(bastion_database_condition, And(Condition(bastion_type_set), Condition("DatabaseCondition")))
+
+# Allow bastion access to database.
+database_security_group_bastion_ingress = ec2.SecurityGroupIngress(
+    'DatabaseSecurityGroupBastionIngress',
+    template=template,
+    GroupId=Ref("DatabaseSecurityGroup"),
+    IpProtocol="tcp",
+    FromPort=FindInMap("RdsEngineMap", Ref("DatabaseEngine"), "Port"),
+    ToPort=FindInMap("RdsEngineMap", Ref("DatabaseEngine"), "Port"),
+    SourceSecurityGroupId=Ref(bastion_security_group),
+    Description="Bastion Access",
+    Condition=bastion_database_condition,
 )
 
 # Elastic IP for Bastion instance
