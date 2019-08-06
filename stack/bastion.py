@@ -193,6 +193,9 @@ bastion_security_group = ec2.SecurityGroup(
             CidrIp="0.0.0.0/0",
         ), Ref("AWS::NoValue")),
     ],
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "bastion"]),
+    ),
 )
 
 # Elastic IP for Bastion instance

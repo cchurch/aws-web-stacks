@@ -1,6 +1,6 @@
 from troposphere import AWS_STACK_NAME, Equals, Join, Ref, autoscaling, iam
 from troposphere.policies import (
-    AutoScalingReplacingUpdate, AutoScalingRollingUpdate, UpdatePolicy
+    AutoScalingRollingUpdate, UpdatePolicy
 )
 
 from .assets import assets_management_policy
@@ -136,14 +136,14 @@ autoscaling_group = autoscaling.AutoScalingGroup(
     HealthCheckType="EC2",
     HealthCheckGracePeriod=300,
     UpdatePolicy=UpdatePolicy(
-        #AutoScalingReplacingUpdate=AutoScalingReplacingUpdate(
+        # AutoScalingReplacingUpdate=AutoScalingReplacingUpdate(
         #    WillReplace=True,
-        #),
+        # ),
         AutoScalingRollingUpdate=AutoScalingRollingUpdate(
-            #PauseTime='PT5M',
-            #MinInstancesInService="1",
+            # PauseTime='PT5M',
+            # MinInstancesInService="1",
             MaxBatchSize='1',
-            #WaitOnResourceSignals=True,
+            # WaitOnResourceSignals=True,
         ),
     ),
     Tags=[

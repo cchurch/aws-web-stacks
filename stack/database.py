@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import os
 
-from troposphere import Equals, FindInMap, If, Not, Ref, ec2, rds
+from troposphere import Equals, FindInMap, If, Join, Not, Ref, Tags, ec2, rds
 
 from .common import dont_create_value, use_aes256_encryption
 from .template import template
@@ -293,6 +293,9 @@ db_security_group = ec2.SecurityGroup(
     Condition=db_condition,
     VpcId=Ref(vpc),
     SecurityGroupIngress=ingress_rules,
+    Tags=Tags(
+        Name=Join("-", [Ref("AWS::StackName"), "rds"]),
+    ),
 )
 
 db_subnet_group = rds.DBSubnetGroup(
