@@ -153,7 +153,7 @@ autoscaling_group = autoscaling.AutoScalingGroup(
             "PropagateAtLaunch": True,
         },
         {
-            "Key": "Role",
+            "Key": "aws-web-stacks:stack-role",
             "Value": "worker",
             "PropagateAtLaunch": True,
         },
