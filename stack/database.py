@@ -160,15 +160,6 @@ db_parameter_group_family = template.add_parameter(
     label="Parameter Group Family",
 )
 
-db_parameter_group = rds.DBParameterGroup(
-    "DatabaseParameterGroup",
-    template=template,
-    Condition=db_condition,
-    Description="Database parameter group.",
-    Family=Ref(db_parameter_group_family),
-    Parameters={},
-)
-
 db_name = template.add_parameter(
     Parameter(
         "DatabaseName",
