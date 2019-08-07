@@ -8,13 +8,22 @@ Change Log
 * TBD
 
 
-`1.5.0`_ (2019-08-06)
+`1.5.0`_ (TBD)
 ---------------------
+
+**Backwards incompatible changes:**
+
+* Update RDS resource name of database to be ``DatabaseInstance`` rather than ``PostgreSQL``. While other engines were previously supported, the title within the stack still referenced PostgreSQL. **This change will force a recreation of your RDS instance.**
+
+What's new in 1.5.0:
 
 * Re-purpose use_aes256_encryption flag to support encryption across S3, RDS, and RDS (thanks @dsummersl)
 * Add configurable ContainerVolumeSize to change root volume size of EC2 instances (thanks @dsummersl)
 * Change generated template output from JSON to YAML (thanks @cchurch)
-
+* Add required DBParameterGroup by default, which allows configuring database specific parameters. This avoids having to reboot a production database instance to add a DBParameterGroup in the future. (thanks @cchurch)
+* Add tags to all resources, including a common ``aws-web-stacks:stack-name`` tag with the stack's name
+* You now have the option of creating a bastion host or VPN server as part of the stack, when a
+  stack with a NAT Gateway is used, to facilitate secure remote access to hosts within the VPC.
 
 `1.4.0`_ (2019-08-05)
 ---------------------
@@ -50,7 +59,6 @@ Features:
   and SSL certificate. See: PR #30
 * You now have the option of creating a bastion host or VPN server as part of the stack, when a
   stack with a NAT Gateway is used, to facilitate secure remote access to hosts within the VPC.
-
 
 `1.2.0`_ (2017-09-27)
 ---------------------
