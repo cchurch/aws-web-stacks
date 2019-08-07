@@ -1,10 +1,20 @@
 import troposphere.ec2 as ec2
-from troposphere import And, Condition, Equals, FindInMap, If, Join, Not, Output, Parameter, Ref, Tags
+from troposphere import (
+    And,
+    Condition,
+    Equals,
+    FindInMap,
+    Join,
+    Not,
+    Output,
+    Parameter,
+    Ref,
+    Tags
+)
 
 from .common import dont_create_value, use_aes256_encryption
 from .template import template
 from .vpc import public_subnet, vpc
-
 
 bastion_type = template.add_parameter(
     Parameter(
@@ -156,13 +166,13 @@ bastion_key_name = template.add_parameter(
 )
 
 bastion_type_set = "BastionTypeSet"
-template.add_condition(bastion_type_set, Not(Equals("", Ref(bastion_type))))
+template.add_condition(bastion_type_set, Not(Equals(dont_create_value, Ref(bastion_type))))
 
 bastion_type_is_openvpn_set = "BastionTypeIsOpenVPNSet"
 template.add_condition(bastion_type_is_openvpn_set, Equals("OpenVPN", Ref(bastion_type)))
 
 bastion_ami_set = "BastionAMISet"
-template.add_condition(bastion_ami_set, Not(Equals("", Ref(bastion_ami))))
+template.add_condition(bastion_ami_set, Not(Equals(dont_create_value, Ref(bastion_ami))))
 
 bastion_type_and_ami_set = "BastionTypeAndAMISet"
 template.add_condition(bastion_type_and_ami_set, And(Condition(bastion_type_set), Condition(bastion_ami_set)))
