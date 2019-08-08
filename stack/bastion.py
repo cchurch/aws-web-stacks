@@ -282,7 +282,7 @@ bastion_instance = ec2.Instance(
             "Value": Join("-", [Ref("AWS::StackName"), "bastion"]),
         },
         {
-            "Key": "aws-web-stacks:stack-role",
+            "Key": "aws-web-stacks:role",
             "Value": "bastion",
         },
     ],
