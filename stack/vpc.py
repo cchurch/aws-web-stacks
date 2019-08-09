@@ -24,9 +24,6 @@ USE_DOKKU = os.environ.get('USE_DOKKU') == 'on'
 PRIVATE_IPV4_CIDR_REGEX = r"^((10\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)|(172\.(1[6-9]|2[0-9]|3[0-1])\.)|192\.168\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$"  # noqa: E501
 PRIVATE_IPV4_CONSTRAINT = "Must be a private IPv4 range with size /16 and /28."
 
-import re
-re.compile(PRIVATE_IPV4_CIDR_REGEX)
-
 primary_az = template.add_parameter(
     Parameter(
         "PrimaryAZ",
