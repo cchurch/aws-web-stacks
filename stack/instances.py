@@ -1,7 +1,5 @@
 from troposphere import AWS_STACK_NAME, Equals, Join, Ref, autoscaling, iam
-from troposphere.policies import (
-    AutoScalingRollingUpdate, UpdatePolicy
-)
+from troposphere.policies import AutoScalingRollingUpdate, UpdatePolicy
 
 from .assets import assets_management_policy
 from .common import container_instance_type, use_aes256_encryption

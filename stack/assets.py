@@ -21,7 +21,7 @@ from troposphere.cloudfront import (
     ForwardedValues,
     Origin,
     S3OriginConfig,
-    ViewerCertificate,
+    ViewerCertificate
 )
 from troposphere.s3 import (
     Bucket,
